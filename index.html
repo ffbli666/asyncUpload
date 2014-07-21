@@ -41,32 +41,41 @@
     </style>
 </head>
 <body>
-    <button type='button' name='upload' id='upload' class='btn btn-default'>Upload</button>
-    <br><br>
-    <div class='progress_container'>
-        <div class='item' var='item_template'>
-            <div class='filename' var='filename'>filename</div>         
-            <div class='progress_area'>
-                <div class='progress'>
-                    <div class='progress-bar' var='progress-bar'>
-                        <span var='progress-value'></span>
+<div class="container-fluid">
+    <h1>Demo</h1>
+    <div class="row">    
+        <div class='col-xs-6'>
+            <h3>Upload</h3>
+            <button type='button' name='upload' id='upload' class='btn btn-default'>Upload</button> <span class='status'></span>
+            <br><br>
+            <div class='progress_container'>
+                <div class='item' var='item_template'>
+                    <div class='filename' var='filename'>filename</div>         
+                    <div class='progress_area'>
+                        <div class='progress'>
+                            <div class='progress-bar' var='progress-bar'>
+                                <span var='progress-value'></span>
+                            </div>
+                        </div>
                     </div>
+                    <div class='cancel_area'><a var='cancel'>Cancel</a></div>
                 </div>
             </div>
-            <div class='cancel_area'><a var='cancel'>Cancel</a></div>
+        </div>
+        <div class='col-xs-6'>
+            <h3>Sever Response</h3>
+            <ul class='response'>
+
+            </ul>
         </div>
     </div>
-    <div class='response'>
-
-    </div>
+</div>
 </body>
 </html>
 <script>
 
 
 function fileProgress (file, asyncSend, template) {
-    //var template = progress_container.find('[var=item_template]');
-    //var asyncSend = asyncSend;
     var new_item = template.clone();
 
     new_item.find('[var=filename]').html(file.name);
@@ -78,10 +87,10 @@ function fileProgress (file, asyncSend, template) {
     })
     .done(function(response) {
         new_item.find('[var=cancel]').off('click').html('Completed');
-        console.log(response);
+        $(".response").append("<li>" + response +"</li>");
     })
     .fail(function(response, status, error) {  
-
+        new_item.find('[var=cancel]').off('click').html('Failed');
     })
     .always(function(always) {
 
@@ -104,6 +113,7 @@ $(document).ready(function () {
     progress_container.empty();
 
     var a = $("#upload").asyncUpload({
+        dataType: 'text',
         url: 'upload_submit.php',
         name: 'file',
         multiple: true,
@@ -113,7 +123,14 @@ $(document).ready(function () {
         preSend: function(file, asyncSend) {
             progress_container.append(fileProgress(file, asyncSend, template));
             asyncSend.send();
+            return true;
         },
+        allDone: function() {
+            $('.status').html("all done!");            
+        },
+        someFail: function() {
+            $('.status').html("some fail!");                        
+        }
     });
 });
 </script>
