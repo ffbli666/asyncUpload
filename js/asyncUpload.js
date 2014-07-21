@@ -115,8 +115,9 @@
                 if (!options.preCheck.call(self, self_input[0].files)) {
                     return; 
                 }                               
-
-                for(var i=0; i<self_input[0].files.length; i++) {
+                var i;
+                var file_counts = self_input[0].files.length;
+                for(i=0; i<file_counts; i++) {
                     //create fomedata
                     var formdata = new FormData();              
                     formdata.append(options.name, self_input[0].files[i]);
@@ -131,7 +132,8 @@
 
                     if (!options.preSend.call(self, self_input[0].files[i], asyncSend)) {
                         continue;
-                    }                    
+                    }
+                               
                     asyncSends.push(asyncSend.getDeferred());
                 }
                 
