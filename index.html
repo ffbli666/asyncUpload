@@ -14,28 +14,28 @@
             margin-bottom: 0px
         }
 
-        .progress_template {
+        .progress_container {
             width:  500px;
             border: 1px solid #ccc; 
             border-radius: 4px;
             min-height: 28px;
         }
 
-        .progress_template .item  {
+        .progress_container .item  {
             padding: 4px;
             display: flex;
         }
 
-        .progress_template .filename { 
+        .progress_container .filename { 
             flex:1;
         }
 
-        .progress_template .progress_area { 
+        .progress_container .progress_area { 
             width: 200px;
             padding: 0 10px;
         }
 
-        .progress_template .cancel_area { 
+        .progress_container .cancel_area { 
             width:71px;
         }
     </style>
@@ -43,7 +43,7 @@
 <body>
     <button type='button' name='upload' id='upload' class='btn btn-default'>Upload</button>
     <br><br>
-    <div class='progress_template'>
+    <div class='progress_container'>
         <div class='item' var='item_template'>
             <div class='filename' var='filename'>filename</div>         
             <div class='progress_area'>
@@ -56,47 +56,64 @@
             <div class='cancel_area'><a var='cancel'>Cancel</a></div>
         </div>
     </div>
+    <div class='response'>
 
+    </div>
 </body>
 </html>
 <script>
+
+
+function fileProgress (file, asyncSend, template) {
+    //var template = progress_container.find('[var=item_template]');
+    //var asyncSend = asyncSend;
+    var new_item = template.clone();
+
+    new_item.find('[var=filename]').html(file.name);
+
+    asyncSend.getDeferred()
+    .progress(function (percentComplete) {
+        new_item.find('[var=progress-bar]').css('width', percentComplete + '%');
+        new_item.find('[var=progress-value]').html(parseInt(percentComplete) + '%');
+    })
+    .done(function(response) {
+        new_item.find('[var=cancel]').off('click').html('Completed');
+        console.log(response);
+    })
+    .fail(function(response, status, error) {  
+
+    })
+    .always(function(always) {
+
+    })
+           
+    new_item.find('[var=cancel]').on('click', function() {
+        asyncSend.abort();
+        new_item.find('[var=cancel]').html("Canceled");
+        new_item.find('[var=progress-bar]').css('width', '0%');
+        new_item.find('[var=progress-value]').html('');
+    });
+
+    return new_item;
+} 
+
 $(document).ready(function () {
     var jquery_div;
+    var progress_container = $(".progress_container");
+    var template = progress_container.find('[var=item_template]')
+    progress_container.empty();
 
     var a = $("#upload").asyncUpload({
         url: 'upload_submit.php',
-        name: 'file[]',
+        name: 'file',
         multiple: true,
-        preCheck: function (files){         
-            console.log('[custom] preCheck');
-            console.log(files);
+        preCheck: function (files) {
             return true;
         },
-        progressObject: $(".progress_template").progressObject(),
-        progress: function (percentComplete) {
-            console.log('[custom] ' + percentComplete + '%');
+        preSend: function(file, asyncSend) {
+            progress_container.append(fileProgress(file, asyncSend, template));
+            asyncSend.send();
         },
-        done: function (response) {
-            console.log('[custom] done return:');
-            console.log(response);
-
-        },
-        fail: function (response, status, error) {
-            console.log('[custom] fali return:');
-            console.log(response);
-            if (status == 'abort') {
-                console.log('[custom] abort');
-            }           
-        },
-        always: function() {
-            console.log('[custom] always');
-            $('#cancel').off('click');
-        },
-        abort: function(asyncSend) {
-            $('#cancel').on('click', function() {
-                asyncSend.abort();
-            });
-        }
     });
 });
 </script>
