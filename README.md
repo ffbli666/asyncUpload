@@ -40,7 +40,7 @@ jQuery plugin
 `someFail`：全部檔案完成，但有些失敗的事件
 
 
-## ISSUE
+## Issue
 ayncUpload 建立一次只能 send or cancel 一次
 
 ## 關鍵技術

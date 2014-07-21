@@ -79,7 +79,7 @@
                 preCheck: function (files) { return true; },
                 preSend: function (file, asyncSend) { return true;},
                 allDone: function () {},
-                someFail: function () {}
+                someFail: function () {}                
             }, options);
             
             
@@ -133,7 +133,7 @@
                     if (!options.preSend.call(self, self_input[0].files[i], asyncSend)) {
                         continue;
                     }
-                               
+                    asyncSend.send();           
                     asyncSends.push(asyncSend.getDeferred());
                 }
                 

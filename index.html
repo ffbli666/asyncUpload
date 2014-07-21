@@ -121,8 +121,7 @@ $(document).ready(function () {
             return true;
         },
         preSend: function(file, asyncSend) {
-            progress_container.append(fileProgress(file, asyncSend, template));
-            asyncSend.send();
+            progress_container.append(fileProgress(file, asyncSend, template));            
             return true;
         },
         allDone: function() {
