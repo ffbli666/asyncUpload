@@ -76,6 +76,7 @@
                 url: undefined,
                 name: self.attr('name'),
                 multiple: (self.attr('multiple') == 'multiple') ? true : false,
+                accept: undefined,
                 manual: false,
                 preCheck: function (files) { return true; },
                 preSend: function (file, asyncSend) { return true;},
@@ -106,6 +107,12 @@
             if (options.multiple) {
                 if (self_input.attr('multiple') != 'multiple') {
                     self_input.attr('multiple', 'multiple');
+                }
+            }
+
+            if (options.accept) {
+                if (self_input.attr('accept') != '') {
+                    self_input.attr('accept', options.accept);
                 }
             }
 

@@ -43,92 +43,12 @@
 <body>
 <div class='container-fluid'>
     <h1>Demo</h1>
-    <div class='row'>    
-        <div class='col-xs-6'>
-            <h3>Upload</h3>
-            <button type='button' name='upload' id='upload' class='btn btn-default'>Upload</button> <span class='status'></span>
-            <br><br>
-            <div class='progress_container'>
-                <div class='item' var='item_template'>
-                    <div class='filename' var='filename'>filename</div>         
-                    <div class='progress_area'>
-                        <div class='progress'>
-                            <div class='progress-bar' var='progress-bar'>
-                                <span var='progress-value'></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class='cancel_area'><a var='cancel'>Cancel</a></div>
-                </div>
-            </div>
-        </div>
-        <div class='col-xs-6'>
-            <h3>Sever Response</h3>
-            <ul class='response'>
-
-            </ul>
-        </div>
-    </div>
+    <ul>
+        <li><a href='sample/general.html'>General</a></li>
+        <li><a href='sample/manual_send.html'>Manual_send</a></li>
+    </ul>
 </div>
 </body>
 </html>
 <script>
-
-
-function fileProgress (file, asyncSend, template) {
-    var new_item = template.clone();
-
-    new_item.find('[var=filename]').html(file.name);
-
-    asyncSend.getDeferred()
-    .progress(function (percentComplete) {
-        new_item.find('[var=progress-bar]').css('width', percentComplete + '%');
-        new_item.find('[var=progress-value]').html(parseInt(percentComplete) + '%');
-    })
-    .done(function(response) {
-        new_item.find('[var=cancel]').off('click').html('Completed');
-        $('.response').append('<li>' + response +'</li>');
-    })
-    .fail(function(response, status, error) {  
-        new_item.find('[var=cancel]').off('click').html('Failed');
-    })
-    .always(function(always) {
-
-    })
-           
-    new_item.find('[var=cancel]').on('click', function() {
-        asyncSend.abort();
-        new_item.find('[var=cancel]').html('Canceled');
-        new_item.find('[var=progress-bar]').css('width', '0%');
-        new_item.find('[var=progress-value]').html('');
-    });
-
-    return new_item;
-} 
-
-$(document).ready(function () {    
-    var progress_container = $('.progress_container');
-    var template = progress_container.find('[var=item_template]')
-    progress_container.empty();
-
-    var a = $('#upload').asyncUpload({
-        dataType: 'text',
-        url: 'upload_submit.php',
-        name: 'file',
-        multiple: true,
-        preCheck: function (files) {
-            return true;
-        },
-        preSend: function(file, asyncSend) {
-            progress_container.append(fileProgress(file, asyncSend, template));            
-            return true;
-        },
-        allDone: function() {
-            $('.status').html('all done!');            
-        },
-        someFail: function() {
-            $('.status').html('some fail!');                        
-        }
-    });
-});
 </script>
