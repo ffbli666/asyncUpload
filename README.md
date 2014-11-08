@@ -41,7 +41,7 @@ jQuery plugin
 
 `someFail`：全部檔案完成，但有些失敗的事件
 
-`accept`: filter 副檔名，可參考[HTML input accept Attribute](http://www.w3schools.com/tags/att_input_accept.asp)
+`accept`: filter 副檔名，可參考 [HTML input accept Attribute](http://www.w3schools.com/tags/att_input_accept.asp)
 
 
 ## Issue
