@@ -1,5 +1,3 @@
-# Book Example
-
 asyncUpload
 ===========
 jQuery plugin
