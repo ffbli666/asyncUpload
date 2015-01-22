@@ -12,7 +12,7 @@
         var dfd = $.Deferred();
         var send_xhr = {};        
 
-        var options = $.extend({
+        var settings = $.extend({
             type: 'POST',
             dataType: 'json',
             cache: false,
@@ -22,12 +22,12 @@
             data: undefined
         }, options);
 
-        if (options.url == undefined || options.data == undefined) {
+        if (settings.url == undefined || settings.data == undefined) {
             console.log('need url or data');
             return false;
         }
 
-        options.xhr = function() {
+        settings.xhr = function() {
             var xhr = new window.XMLHttpRequest();
             xhr.upload.addEventListener('progress', function(evt) {
                 var percentComplete = (evt.loaded / evt.total) * 100;
@@ -37,7 +37,7 @@
         };
 
         var send = function() {
-            send_xhr = $.ajax(options);
+            send_xhr = $.ajax(settings);
             send_xhr.pipe(function(response) {
                 return response;
             })
@@ -71,7 +71,7 @@
         asyncUpload: function(options) {
             var self = this;
             var self_input = undefined;
-            var options = $.extend( {
+            var settings = $.extend( {
                 dataType: 'json',
                 url: undefined,
                 name: self.attr('name'),
@@ -81,76 +81,76 @@
                 preCheck: function (files) { return true; },
                 preSend: function (file, asyncSend) { return true;},
                 allDone: function () {},
-                someFail: function () {}                
+                someFail: function () {}
             }, options);
             
             
-            if (options.url == undefined) {
+            if (settings.url == undefined) {
                 console.log('need url');
                 return false;
             }
             
-   
-            if (!self.is('input')) {
-                var new_input = document.createElement('input')
+            if (self.is('input')) {
+                self_input = self;
+            }
+            else {
+                var new_input = document.createElement('input');
                 new_input.setAttribute('type','file');
                 self_input = $(new_input);
                 self.on('click', function(evt) {
                     self_input.trigger('click');
                 });
-            }
-            else {
-                self_input = self;
-            }           
+            }            
 
             //multiple
-            if (options.multiple) {
+            if (settings.multiple) {
                 if (self_input.attr('multiple') != 'multiple') {
                     self_input.attr('multiple', 'multiple');
                 }
             }
 
-            if (options.accept) {
+            if (settings.accept) {
                 if (self_input.attr('accept') != '') {
-                    self_input.attr('accept', options.accept);
+                    self_input.attr('accept', settings.accept);
                 }
             }
 
             self_input.on('change', {}, function(evt) { 
-                var asyncSends = [];
+                
                 evt.preventDefault();
 
-                if (!options.preCheck.call(self, self_input[0].files)) {
+                if (!settings.preCheck.call(self, self_input[0].files)) {
                     return; 
                 }                               
                 var i;
+                var asyncSends = [];
                 var file_counts = self_input[0].files.length;
                 for(i=0; i<file_counts; i++) {
                     //create fomedata
-                    var formdata = new FormData();              
-                    formdata.append(options.name, self_input[0].files[i]);
+                    var formdata = new FormData();
+                    formdata.append(settings.name, self_input[0].files[i]);
                     
                     //init asyncSend
                     var asyncSend = new $.asyncSend({
-                        dataType: options.dataType,
-                        url: options.url,
+                        dataType: settings.dataType,
+                        url: settings.url,
                         data: formdata,
                         file: self_input[0].files[i],
                     });
 
-                    if (!options.preSend.call(self, self_input[0].files[i], asyncSend)) {
+                    if (!settings.preSend.call(self, self_input[0].files[i], asyncSend)) {
                         continue;
                     }
-                    if (!options.manual) {
-                        asyncSend.send();           
+                    if (!settings.manual) {
+                        asyncSend.send();
                     }
                     asyncSends.push(asyncSend.getDeferred());
                 }
                 
-                $.when.apply($, asyncSends).then(options.allDone, options.someFail);
+                $.when.apply($, asyncSends).then(settings.allDone, settings.someFail);
                 self_input[0].value = '';
             });
             return this;
         }
     });
-})(jQuery)
+})(jQuery);
