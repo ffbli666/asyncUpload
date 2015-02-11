@@ -10,7 +10,7 @@
     $.asyncSend = function (options) {
         var self = this;
         var dfd = $.Deferred();
-        var send_xhr = {};        
+        var send_xhr = {};
 
         var settings = $.extend({
             type: 'POST',
@@ -22,7 +22,7 @@
             data: undefined
         }, options);
 
-        if (settings.url == undefined || settings.data == undefined) {
+        if (settings.url === undefined || settings.data === undefined) {
             console.log('need url or data');
             return false;
         }
@@ -70,7 +70,7 @@
     $.fn.extend({     
         asyncUpload: function(options) {
             var self = this;
-            var self_input = undefined;
+            var self_input;
             var settings = $.extend( {
                 dataType: 'json',
                 url: undefined,
@@ -84,8 +84,7 @@
                 someFail: function () {}
             }, options);
             
-            
-            if (settings.url == undefined) {
+            if (settings.url === undefined) {
                 console.log('need url');
                 return false;
             }
@@ -97,10 +96,16 @@
                 var new_input = document.createElement('input');
                 new_input.setAttribute('type','file');
                 self_input = $(new_input);
+                //
+                // ie & safari hack
+                //
+                new_input.setAttribute('style','width:0px; height:0px');
+                $('body').append(self_input);
+                
                 self.on('click', function(evt) {
                     self_input.trigger('click');
                 });
-            }            
+            }
 
             //multiple
             if (settings.multiple) {
@@ -110,7 +115,7 @@
             }
 
             if (settings.accept) {
-                if (self_input.attr('accept') != '') {
+                if (self_input.attr('accept') !== '') {
                     self_input.attr('accept', settings.accept);
                 }
             }
