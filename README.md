@@ -6,7 +6,7 @@ jQuery plugin
 兩個主要實作 `$.asyncSend` 和 `$(selector).asyncUpload`
 
 #Demo site
-[Demo](http://175.181.41.247/works/asyncUpload/)
+[Demo](http://ffbli.no-ip.org/works/asyncUpload/)
 
 ### `$.asyncSend`
 是 ajax 強化版，使用了 jQuery dererred 實現了 Ajax 上傳時回傳目前進度和 send、progreee、done、fail、abort 等事件，方便使用者客製化自己的事件
