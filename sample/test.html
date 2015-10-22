@@ -75,7 +75,17 @@
 </body>
 </html>
 <script>
-var asyncUpload = function (selector, options) {
+'use strict';
+var DefaultFileUpload = function(customize) {
+    return {
+        check: function (file) {return true},
+        progress: function (e) {},
+        success: function (response) {},
+        error: function (e) {}
+    };
+};
+
+var AsyncUpload = function (selector, options) {
     var elements = document.querySelectorAll(selector);
     if (elements.length == 0) {
         throw new Error('Can not select any element');
@@ -85,11 +95,12 @@ var asyncUpload = function (selector, options) {
         url: options.url || undefined,
         accept: options.accept || undefined,
         multiple: options.multiple || false,
-        checkFiles: options.checkFiles || function() {return true},
-        preSend: options.preSend || function() {return true},
-        progress: options.progress || function() {},
-        success: options.success || function() {},
-        error: options.error || function() {}
+        FileUpload: options.FileUpload || DefaultFileUpload,
+        //checkFiles: options.checkFiles || function() {return true},
+        // preSend: options.preSend || function() {return true},
+        // progress: options.progress || function() {},
+        // success: options.success || function() {},
+        // error: options.error || function() {}
     };
 
     if (!options.url) {
@@ -112,96 +123,97 @@ var asyncUpload = function (selector, options) {
             input.accept = settings.accept;
         }
         input.onchange = function () {
+            /*
+                這是個特殊解法
+                因為 fileUpload 是使用 var 宣告
+                而 javascript 在 = 時，如果是 object 會使用 call by reference
+                故在 async function 內(例如 xhr.upload.onprogress) 都會參考到最後一個 fileUpload
 
-            if (typeof settings.checkFiles === 'function') {
-                if (!settings.checkFiles.call(element, input.files)) {
-                    return;
-                };
+                最好的解法是使用 let 宣告，但有許多瀏覽器沒有支援 http://caniuse.com/#search=let
+                所以只好使用 forEach 令其 scope 是獨立的
+                input.files 沒有 forEach，所以丟入 array 產生 forEach
+            */
+            var fileList = [];
+            for(var j=0; j<input.files.length; j++) {
+                fileList.push(input.files[j]);
             }
 
-            for(j=0; j<input.files.length; j++) {
+            fileList.forEach(function(file) {
                 //create fomedata
                 var formData = new FormData();
-                var file = input.files[j];
+                //var file = input.files[j];
                 formData.append(element.name, file);
 
                 var xhr = new XMLHttpRequest();
-                xhr.open("POST", settings.url, true);
+                xhr.open('POST', settings.url, true);
                 file.xhr = xhr;
-                if (typeof settings.preSend === 'function') {
-                    settings.preSend.call(xhr, file);
+                //need use let, but firefox not support
+                var fileUpload = new settings.FileUpload();
+                if (typeof fileUpload.check === 'function') {
+                    fileUpload.check.call(xhr, file);
                 }
 
-                if (typeof settings.progress === 'function') {
+                if (typeof fileUpload.progress === 'function') {
                     xhr.upload.onprogress = function(e) {
-                        var percentComplete = (e.loaded / e.total) * 100;
-                        settings.progress.call(xhr, percentComplete);
+                        fileUpload.progress.call(xhr, e);
                     };
                 }
 
-                if (typeof settings.success === 'function') {
+                if (typeof fileUpload.success === 'function') {
                     xhr.onload = function() {
-                        if (xhr.readyState == 4 && xhr.status == 200) {
-                                settings.success.call(xhr, xhr.response);
+                        if (this.readyState == 4 && this.status == 200) {
+                            fileUpload.success.call(xhr, xhr.response);
                         }
                     };
                 }
 
-                if (typeof settings.error === 'function') {
+                if (typeof fileUpload.error === 'function') {
                     xhr.onerror = function(e) {
-                            settings.error.call(xhr, e);
+                        fileUpload.error.call(xhr, e);
                     };
                 }
                 xhr.send(formData);
-            }
+            });
         };
     };
 }
 
-var container = document.querySelector('.progress_container');
-var template = container.querySelector('.item').cloneNode(true);
+var FileUpload = function() {
+    var container = document.querySelector('.progress_container');
+    var template = container.querySelector('.item').cloneNode(true);
+    container.innerHTML = '';
+    return function () {
+        var that = this;
+        var tmp = template.cloneNode(true);
+        var check = function(file) {
+            tmp.querySelector('.filename').innerHTML = file.name;
+            tmp.querySelector('.cancel').onclick = function() {
+                file.xhr.abort();
+            };
+            container.appendChild(tmp);
+            return true;
+        };
+        var progress = function(e) {
+            var percentComplete = parseInt((e.loaded / e.total) * 100);
+            tmp.querySelector('.progress-bar').style.width = percentComplete + '%';
+            tmp.querySelector('.progress-value').innerHTML = percentComplete + '%';
+        };
 
-var upload = new asyncUpload('#upload', {
+        var success = function(response) {
+            document.querySelector('.response').innerHTML += '<li>' + response + '</li>';
+        };
+
+        return  {
+            check: check,
+            progress: progress,
+            success: success
+        };
+    };
+};
+
+var upload = new AsyncUpload('#upload', {
     url: '../upload_submit.php',
     multiple: true,
-    checkFiles: function (files) {
-        return true;
-    },
-    preSend: function (file) {
-        var tmp = template.cloneNode(true);
-        tmp.querySelector('.filename').innerHTML = file.name;
-        container.appendChild(tmp);
-        document.querySelector('.cancel').onclick = function() {
-            file.xhr.abort();
-        };
-        return true;
-    },
-    progress: function (percentComplete) {
-        var percent = parseInt(percentComplete);
-        document.querySelector('.progress-bar').style.width = percent + '%';
-        document.querySelector('.progress-value').innerHTML = percent + '%';
-    },
-    success: function (response) {
-        document.querySelector('.response').innerHTML += '<li>' + response + '</li>';
-    },
+    //FileUpload: new FileUpload(),
 });
-
-// var upload_image = new asyncUpload('#upload_image', {
-//     url: '../upload_submit.php',
-//     multiple: true,
-//     accept: 'image/*',
-//     checkFiles: function(files) {
-//         console.log(files);
-//         return true;
-//     },
-//     progress: function(percentComplete) {
-//         console.log(percentComplete);
-//         console.log(document.querySelector('.progress-bar'));
-//         document.querySelector('.progress-bar').style.width = percentComplete + '%';
-//         document.querySelector('.progress-value').innerHTML = percentComplete + '%';
-//     },
-//     success: function(response) {
-//         document.querySelector('.response').innerHTML += '<li>' + response + '</li>';
-//     },
-// });
 </script>
