@@ -1,0 +1,207 @@
+<html>
+<head>
+    <meta http-equiv='content-type' content='text/html; charset=utf-8'>
+    <title></title>
+    <link href='../css/bootstrap.min.css' rel='stylesheet'>
+    <style>
+        .hiden {
+            display: none;
+        }
+
+        .progress {
+            margin-bottom: 0px
+        }
+
+        .progress_container {
+            width:  500px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-height: 28px;
+        }
+
+        .progress_container .item  {
+            padding: 4px;
+            display: flex;
+            display: -webkit-box;
+        }
+
+        .progress_container .filename {
+            flex:1;
+            -webkit-box-flex: 1;
+        }
+
+        .progress_container .progress_area {
+            width: 200px;
+            padding: 0 10px;
+        }
+
+        .progress_container .cancel_area {
+            width:71px;
+        }
+    </style>
+</head>
+<body>
+<div class='container-fluid'>
+    <h1>Demo</h1>
+    <div class='row'>
+        <div class='col-xs-6'>
+            <h3>Upload </h3>
+            <button type='button' name='upload' id='upload' class='btn btn-default'>Upload</button>
+            <button type='button' name='upload' id='upload_image' class='btn btn-default'>Upload Image</button>
+            <span class='status'></span>
+            <br><br>
+            <div class='progress_container'>
+                <div class='item'>
+                    <div class='filename'>filename</div>
+                    <div class='progress_area'>
+                        <div class='progress'>
+                            <div class='progress-bar'>
+                                <span class='progress-value'></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class='cancel_area'><a class='cancel'>Cancel</a></div>
+                </div>
+            </div>
+        </div>
+        <div class='col-xs-6'>
+            <h3>Sever Response</h3>
+            <ul class='response'>
+
+            </ul>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+<script>
+var asyncUpload = function (selector, options) {
+    var elements = document.querySelectorAll(selector);
+    if (elements.length == 0) {
+        throw new Error('Can not select any element');
+    }
+
+    var settings = {
+        url: options.url || undefined,
+        accept: options.accept || undefined,
+        multiple: options.multiple || false,
+        checkFiles: options.checkFiles || function() {return true},
+        preSend: options.preSend || function() {return true},
+        progress: options.progress || function() {},
+        success: options.success || function() {},
+        error: options.error || function() {}
+    };
+
+    if (!options.url) {
+        throw new Error('Need url!');
+    }
+
+    for(var i=0; i<elements.length; i++) {
+        var element = elements[i];
+        var input = document.createElement('input');
+        input.setAttribute('type', 'file');
+        element.onclick = function() {
+            input.click();
+        };
+        element.input = input;
+
+        if (settings.multiple) {
+            input.multiple = 'multiple';
+        }
+        if (settings.accept) {
+            input.accept = settings.accept;
+        }
+        input.onchange = function () {
+
+            if (typeof settings.checkFiles === 'function') {
+                if (!settings.checkFiles.call(element, input.files)) {
+                    return;
+                };
+            }
+
+            for(j=0; j<input.files.length; j++) {
+                //create fomedata
+                var formData = new FormData();
+                var file = input.files[j];
+                formData.append(element.name, file);
+
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", settings.url, true);
+                file.xhr = xhr;
+                if (typeof settings.preSend === 'function') {
+                    settings.preSend.call(xhr, file);
+                }
+
+                if (typeof settings.progress === 'function') {
+                    xhr.upload.onprogress = function(e) {
+                        var percentComplete = (e.loaded / e.total) * 100;
+                        settings.progress.call(xhr, percentComplete);
+                    };
+                }
+
+                if (typeof settings.success === 'function') {
+                    xhr.onload = function() {
+                        if (xhr.readyState == 4 && xhr.status == 200) {
+                                settings.success.call(xhr, xhr.response);
+                        }
+                    };
+                }
+
+                if (typeof settings.error === 'function') {
+                    xhr.onerror = function(e) {
+                            settings.error.call(xhr, e);
+                    };
+                }
+                xhr.send(formData);
+            }
+        };
+    };
+}
+
+var container = document.querySelector('.progress_container');
+var template = container.querySelector('.item').cloneNode(true);
+
+var upload = new asyncUpload('#upload', {
+    url: '../upload_submit.php',
+    multiple: true,
+    checkFiles: function (files) {
+        return true;
+    },
+    preSend: function (file) {
+        var tmp = template.cloneNode(true);
+        tmp.querySelector('.filename').innerHTML = file.name;
+        container.appendChild(tmp);
+        document.querySelector('.cancel').onclick = function() {
+            file.xhr.abort();
+        };
+        return true;
+    },
+    progress: function (percentComplete) {
+        var percent = parseInt(percentComplete);
+        document.querySelector('.progress-bar').style.width = percent + '%';
+        document.querySelector('.progress-value').innerHTML = percent + '%';
+    },
+    success: function (response) {
+        document.querySelector('.response').innerHTML += '<li>' + response + '</li>';
+    },
+});
+
+// var upload_image = new asyncUpload('#upload_image', {
+//     url: '../upload_submit.php',
+//     multiple: true,
+//     accept: 'image/*',
+//     checkFiles: function(files) {
+//         console.log(files);
+//         return true;
+//     },
+//     progress: function(percentComplete) {
+//         console.log(percentComplete);
+//         console.log(document.querySelector('.progress-bar'));
+//         document.querySelector('.progress-bar').style.width = percentComplete + '%';
+//         document.querySelector('.progress-value').innerHTML = percentComplete + '%';
+//     },
+//     success: function(response) {
+//         document.querySelector('.response').innerHTML += '<li>' + response + '</li>';
+//     },
+// });
+</script>
