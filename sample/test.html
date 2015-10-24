@@ -74,97 +74,9 @@
 </div>
 </body>
 </html>
+<script src='../js/asyncUpload.js'></script>
 <script>
 'use strict';
-var DefaultFileUpload = function(customize) {
-    return {
-        check: function (file) {return true},
-        progress: function (e) {},
-        success: function (response) {},
-        error: function (e) {}
-    };
-};
-
-var AsyncUpload = function (selector, options) {
-    var elements = document.querySelectorAll(selector);
-    if (elements.length == 0) {
-        throw new Error('Can not select any element');
-    }
-
-    var settings = {
-        url: options.url || undefined,
-        accept: options.accept || undefined,
-        multiple: options.multiple || false,
-        FileUpload: options.FileUpload || DefaultFileUpload,
-    };
-
-    if (!options.url) {
-        throw new Error('Need url!');
-    }
-
-    for(var i=0; i<elements.length; i++) {
-        var element = elements[i];
-        var input = document.createElement('input');
-        input.setAttribute('type', 'file');
-        element.onclick = function() {
-            input.click();
-        };
-        element.input = input;
-
-        if (settings.multiple) {
-            input.multiple = 'multiple';
-        }
-        if (settings.accept) {
-            input.accept = settings.accept;
-        }
-        input.onchange = function () {
-            var fileList = [];
-            for(var j=0; j<input.files.length; j++) {
-                //create fomedata
-                var formData = new FormData();
-                var file = input.files[j];
-                formData.append(element.name, file);
-
-                var xhr = new XMLHttpRequest();
-                xhr.open('POST', settings.url, true);
-                file.xhr = xhr;
-                //need use let, but firefox not support
-                var fileUpload = new settings.FileUpload();
-                if (typeof fileUpload.check === 'function') {
-                    fileUpload.check.call(xhr, file);
-                }
-
-                if (typeof fileUpload.progress === 'function') {
-                    // xhr.upload.onprogress = function(e) {
-                    //     fileUpload.progress.call(xhr, e);
-                    // };
-                    xhr.upload.onprogress = fileUpload.progress;
-                }
-
-                if (typeof fileUpload.success === 'function') {
-                    /*
-                        因為 fileUpload 是使用 var 宣告
-                        而 javascript 在 = 時，如果是 object 會使用 call by reference
-                        故在 async function 內(例如 xhr.upload.onprogress) 都會參考到最後一個
-                    */
-                    xhr.onload = (function() {
-                        if (this.readyState == 4 && this.status == 200) {
-                            fileUpload.success.call(xhr, xhr.response);
-                        }
-                    }).bind(this);
-                }
-
-                if (typeof fileUpload.error === 'function') {
-                    // xhr.onerror = function(e) {
-                    //     fileUpload.error.call(xhr, e);
-                    // };
-                    xhr.onerror = fileUpload.error;
-                }
-                xhr.send(formData);
-            };
-        };
-    };
-}
 
 var FileUpload = function() {
     var container = document.querySelector('.progress_container');
@@ -173,9 +85,10 @@ var FileUpload = function() {
     return function () {
         var tmp = template.cloneNode(true);
         var check = function(file) {
+            var that = this;
             tmp.querySelector('.filename').innerHTML = file.name;
             tmp.querySelector('.cancel').onclick = function() {
-                file.xhr.abort();
+                that.xhr.abort();
             };
             container.appendChild(tmp);
             return true;
@@ -204,9 +117,17 @@ var FileUpload = function() {
     };
 };
 
+var fileUpload = new FileUpload();
 var upload = new AsyncUpload('#upload', {
     url: '../upload_submit.php',
     multiple: true,
-    FileUpload: new FileUpload(),
+    FileUpload: fileUpload
+});
+
+var uploadImage = new AsyncUpload('#upload_image', {
+    url: '../upload_submit.php',
+    multiple: true,
+    accept: 'image/*',
+    FileUpload: fileUpload
 });
 </script>

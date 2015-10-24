@@ -1,161 +1,131 @@
-/**
- * 
- * 
- *  Zong-Ying Lyu : ffbli666@gmail.com
- */
+'use strict';
+var DefaultFileUpload = function(customize) {
+    return {
+        check: function (file) {return true},
+        progress: function (e) {},
+        success: function (response) {},
+        error: function (e) {}
+    };
+};
 
+var AsyncSend = function (url, file, FileUpload) {
+    if (!url) {
+        throw new Error('Need url!');
+    }
 
+    if (!file) {
+        throw new Error('Need file!');
+    }
+    var FUpolod = FileUpload || DefaultFileUpload;
+    var formData = new FormData();
+    formData.append(file.name, file);
 
-(function($) {
-    $.asyncSend = function (options) {
-        var self = this;
-        var dfd = $.Deferred();
-        var send_xhr = {};
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    var send = function() {
+        xhr.send(formData);
+    };
 
-        var settings = $.extend({
-            type: 'POST',
-            dataType: 'json',
-            cache: false,
-            processData: false,
-            contentType: false,
-            url: undefined,
-            data: undefined
-        }, options);
+    var abort = function() {
+        xhr.abort();
+    };
+    //need use let, but firefox not support
+    var object = {
+        xhr: xhr,
+        file: file,
+        url: url,
+        send: send,
+        abort: abort
+    };
 
-        if (settings.url === undefined || settings.data === undefined) {
-            console.log('need url or data');
-            return false;
+    var fileUpload = new FUpolod();
+    if (typeof fileUpload.check === 'function') {
+        if (!fileUpload.check.call(object, file)) {
+            return undefined;
         }
+    }
 
-        settings.xhr = function() {
-            var xhr = new window.XMLHttpRequest();
-            xhr.upload.addEventListener('progress', function(evt) {
-                var percentComplete = (evt.loaded / evt.total) * 100;
-                dfd.notify(percentComplete);
-            }, false);
-            return xhr;
-        };
+    if (typeof fileUpload.progress === 'function') {
+        xhr.upload.onprogress = fileUpload.progress.bind(object);
+    }
 
-        var send = function() {
-            send_xhr = $.ajax(settings);
-            send_xhr.pipe(function(response) {
-                return response;
-            })
-            .fail(function(xhr, status, error) {
-                dfd.reject(xhr, status, error);
-            })
-            .done(function(response) {
-                dfd.resolve(response);
-            });
-            return send_xhr;
-        };
-
-        var getDeferred = function() {
-            return dfd.promise();
-        };
-
-        var abort = function() {
-            if (send_xhr && send_xhr.readystate != 4) {
-                send_xhr.abort();
-            }           
-        };
-
-        return {
-            getDeferred: getDeferred,
-            send: send,
-            abort: abort
-        };
-    };  
-
-    $.fn.extend({     
-        asyncUpload: function(options) {
-            var self = this;
-            var self_input;
-            var settings = $.extend( {
-                dataType: 'json',
-                url: undefined,
-                name: self.attr('name'),
-                multiple: (self.attr('multiple') == 'multiple') ? true : false,
-                accept: undefined,
-                manual: false,
-                preCheck: function (files) { return true; },
-                preSend: function (file, asyncSend) { return true;},
-                allDone: function () {},
-                someFail: function () {}
-            }, options);
-            
-            if (settings.url === undefined) {
-                console.log('need url');
-                return false;
+    if (typeof fileUpload.success === 'function') {
+        xhr.onload = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                fileUpload.success.call(object, xhr.response);
             }
-            
-            if (self.is('input')) {
-                self_input = self;
-            }
-            else {
-                var new_input = document.createElement('input');
-                new_input.setAttribute('type','file');
-                self_input = $(new_input);
-                //
-                // ie & safari hack
-                //
-                new_input.setAttribute('style','width:0px; height:0px');
-                $('body').append(self_input);
-                
-                self.on('click', function(evt) {
-                    self_input.trigger('click');
-                });
-            }
+        };
+    }
 
-            //multiple
-            if (settings.multiple) {
-                if (self_input.attr('multiple') != 'multiple') {
-                    self_input.attr('multiple', 'multiple');
-                }
-            }
+    if (typeof fileUpload.error === 'function') {
+        xhr.onerror = fileUpload.error.bind(object);
+    }
 
-            if (settings.accept) {
-                if (self_input.attr('accept') !== '') {
-                    self_input.attr('accept', settings.accept);
-                }
-            }
+    return {
+        send: send,
+        abort: abort
+    };
+};
 
-            self_input.on('change', {}, function(evt) { 
-                
-                evt.preventDefault();
+var AsyncUpload = function (selector, options) {
+    var elements = document.querySelectorAll(selector);
+    if (elements.length == 0) {
+        throw new Error('Can not select any element');
+    }
 
-                if (!settings.preCheck.call(self, self_input[0].files)) {
-                    return; 
-                }                               
-                var i;
-                var asyncSends = [];
-                var file_counts = self_input[0].files.length;
-                for(i=0; i<file_counts; i++) {
-                    //create fomedata
-                    var formdata = new FormData();
-                    formdata.append(settings.name, self_input[0].files[i]);
-                    
-                    //init asyncSend
-                    var asyncSend = new $.asyncSend({
-                        dataType: settings.dataType,
-                        url: settings.url,
-                        data: formdata,
-                        file: self_input[0].files[i],
-                    });
+    var settings = {
+        url: options.url || undefined,
+        accept: options.accept || undefined,
+        multiple: options.multiple || false,
+        manualSend: options.manualSend || false,
+        FileUpload: options.FileUpload || DefaultFileUpload,
+    };
 
-                    if (!settings.preSend.call(self, self_input[0].files[i], asyncSend)) {
-                        continue;
-                    }
-                    if (!settings.manual) {
-                        asyncSend.send();
-                    }
-                    asyncSends.push(asyncSend.getDeferred());
-                }
-                
-                $.when.apply($, asyncSends).then(settings.allDone, settings.someFail);
-                self_input[0].value = '';
-            });
-            return this;
+    if (!options.url) {
+        throw new Error('Need url!');
+    }
+
+    var asList = [];
+    for(var i=0; i<elements.length; i++) {
+        var element = elements[i];
+        var input = document.createElement('input');
+        input.setAttribute('type', 'file');
+        element.onclick = function() {
+            input.click();
+        };
+        element.input = input;
+
+        if (settings.multiple) {
+            input.multiple = 'multiple';
         }
-    });
-})(jQuery);
+        if (settings.accept) {
+            input.accept = settings.accept;
+        }
+        input.onchange = function () {
+            for (var j=0; j<input.files.length; j++) {
+                var asyncSend = AsyncSend(settings.url, input.files[j], settings.FileUpload);
+                asList.push(asyncSend);
+                if (!settings.manualSend) {
+                    asyncSend.send();
+                }
+            };
+        };
+    }
+
+    // var send = function () {
+    //     asList.forEach(function (asyncSend) {
+    //         asyncSend.send();
+    //     });
+    // };
+
+    // var abort = function () {
+    //     asList.forEach(function (asyncSend) {
+    //         asyncSend.abort();
+    //     });
+    // };
+
+    // return {
+    //     send: send,
+    //     abort: abort
+    // };
+};

@@ -2,8 +2,6 @@
 <head>
     <meta http-equiv='content-type' content='text/html; charset=utf-8'>
     <title></title>
-    <script src='../js/jquery-1.11.0.min.js'></script> 
-    <script src='../js/asyncUpload.js'></script>    
     <link href='../css/bootstrap.min.css' rel='stylesheet'>
     <style>
         .hiden {
@@ -16,7 +14,7 @@
 
         .progress_container {
             width:  600px;
-            border: 1px solid #ccc; 
+            border: 1px solid #ccc;
             border-radius: 4px;
             min-height: 28px;
         }
@@ -24,51 +22,53 @@
         .progress_container .item  {
             padding: 4px;
             display: flex;
-            display: -webkit-box; 
+            display: -webkit-box;
         }
 
-        .progress_container .filename { 
+        .progress_container .filename {
             flex: 1;
             -webkit-box-flex: 1;
         }
 
-        .progress_container .progress_area { 
+        .progress_container .progress_area {
             width: 200px;
             padding: 0 10px;
         }
 
-        .progress_container .upload_area { 
+        .progress_container .upload_area {
             width:71px;
         }
-        .progress_container .cancel_area { 
+        .progress_container .cancel_area {
             width:71px;
         }
-        .progress_container .status_area { 
+        .progress_container .status_area {
             width:71px;
         }
+    </style>
     </style>
 </head>
 <body>
 <div class='container-fluid'>
     <h1>Demo</h1>
-    <div class='row'>    
+    <div class='row'>
         <div class='col-xs-6'>
-            <h3>Upload</h3>
-            <button type='button' name='upload' id='upload' class='btn btn-default'>Choose files</button> <span class='status'></span>
+            <h3>Upload </h3>
+            <button type='button' name='upload' id='upload' class='btn btn-default'>Choose files</button>
+            <span class='status'></span>
             <br><br>
             <div class='progress_container'>
-                <div class='item' var='item_template'>
-                    <div class='filename' var='filename'>filename</div>         
+                <div class='item'>
+                    <div class='filename'>filename</div>
                     <div class='progress_area'>
                         <div class='progress'>
-                            <div class='progress-bar' var='progress-bar'>
-                                <span var='progress-value'></span>
+                            <div class='progress-bar'>
+                                <span class='progress-value'></span>
                             </div>
                         </div>
                     </div>
-                    <div class='upload_area'><a var='upload'>Upload</a></div>
-                    <div class='cancel_area'><a var='cancel'>Cancel</a></div>
-                    <div class='status_area'><span var='status'></span></div>
+                    <div class='upload_area'><a class='upload'>Upload</a></div>
+                    <div class='cancel_area'><a class='cancel'>Cancel</a></div>
+                    <div class='status_area'><span class='status'></span></div>
                 </div>
             </div>
         </div>
@@ -82,74 +82,67 @@
 </div>
 </body>
 </html>
+<script src='../js/asyncUpload.js'></script>
 <script>
+'use strict';
 
-
-function fileProgress (file, asyncSend, template) {    
-    var new_item = template.clone();
-
-    new_item.find('[var=filename]').html(file.name);
-
-    asyncSend.getDeferred()
-    .progress(function (percentComplete) {
-        new_item.find('[var=progress-bar]').css('width', percentComplete + '%');
-        new_item.find('[var=progress-value]').html(parseInt(percentComplete) + '%');
-    })
-    .done(function(response) {
-        new_item.find('[var=upload]').off('click');
-        new_item.find('[var=cancel]').off('click');
-        new_item.find('[var=status]').html('Completed');
-        $('.response').append('<li>' + response +'</li>');
-    })
-    .fail(function(response, status, error) {  
-        new_item.find('[var=upload]').off('click');
-        new_item.find('[var=cancel]').off('click');
-        new_item.find('[var=status]').html('Failed');
-    })
-    .always(function(always) {
-
-    })
-      
-    new_item.find('[var=upload]').on('click', function() {
-        asyncSend.send();
-        $(this).off('click');
-    });
-           
-    new_item.find('[var=cancel]').on('click', function() {
-        asyncSend.abort();        
-        new_item.find('[var=progress-bar]').css('width', '0%');
-        new_item.find('[var=progress-value]').html('');
-        $(this).off('click');
-    });
-
-    return new_item;
-} 
-
-$(document).ready(function () {    
-    var progress_container = $('.progress_container');
-    var template = progress_container.find('[var=item_template]')
-    progress_container.empty();
-
-    var upload = $('#upload').asyncUpload({
-        dataType: 'text',
-        url: '../upload_submit.php',
-        name: 'file',
-        multiple: true,
-        manual: true,
-        preCheck: function (files) {
+var FileUpload = function() {
+    var container = document.querySelector('.progress_container');
+    var template = container.querySelector('.item').cloneNode(true);
+    container.innerHTML = '';
+    return function () {
+        var tmp = template.cloneNode(true);
+        var check = function(file) {
+            var that = this;
+            tmp.querySelector('.filename').innerHTML = file.name;
+            tmp.querySelector('.upload').onclick = function() {
+                that.send();
+                this.onclick = '';
+            };
+            tmp.querySelector('.cancel').onclick = function() {
+                that.abort();
+                tmp.querySelector('.progress-bar').style.width = '0%';
+                tmp.querySelector('.progress-value').innerHTML = '';
+                this.onclick = '';
+            };
+            container.appendChild(tmp);
             return true;
-        },
-        preSend: function(file, asyncSend) {
-            progress_container.append(fileProgress(file, asyncSend, template));
-            //asyncSend.send();
-            return true;
-        },
-        allDone: function() {
-            $('.status').html('all done!');            
-        },
-        someFail: function() {
-            $('.status').html('some fail!');                        
-        }
-    });
+        };
+
+        var progress = function(e) {
+            var percentComplete = parseInt((e.loaded / e.total) * 100);
+            tmp.querySelector('.progress-bar').style.width = percentComplete + '%';
+            tmp.querySelector('.progress-value').innerHTML = percentComplete + '%';
+        };
+
+        var success = function(response) {
+            document.querySelector('.response').innerHTML += '<li>' + response + '</li>';
+            tmp.querySelector('.upload').onclick = '';
+            tmp.querySelector('.cancel').onclick = '';
+            tmp.querySelector('.status').innerHTML = 'Failed';
+        };
+
+        var error = function(e) {
+            console.log(e);
+            tmp.querySelector('.status').innerHTML = 'Failed';
+        };
+
+        return  {
+            check: check,
+            progress: progress,
+            success: success,
+            error: error
+        };
+    };
+};
+
+var fileUpload = new FileUpload();
+
+var upload = new AsyncUpload('#upload', {
+    url: '../upload_submit.php',
+    multiple: true,
+    manualSend: true,
+    FileUpload: fileUpload
 });
+
 </script>
